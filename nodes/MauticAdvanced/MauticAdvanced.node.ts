@@ -49,7 +49,7 @@ import { statsFields, statsOperations } from './StatsDescription';
 
 export class MauticAdvanced implements INodeType {
   description: INodeTypeDescription = {
-    displayName: 'Mautic Advanced',
+    displayName: 'Mautic 7+ (Advanced)',
     name: 'mauticAdvanced',
     icon: 'file:MauticAdvancedIcon.svg',
     group: ['output'],
