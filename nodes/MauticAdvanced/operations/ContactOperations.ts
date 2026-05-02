@@ -5,6 +5,7 @@ import {
   handleApiError,
   makeApiRequest,
   makePaginatedRequest,
+  makePaginatedRequestV2,
   getOptionalParam,
   getRequiredParam,
   getMauticVersion,
@@ -226,10 +227,31 @@ async function getContact(
   return convertNumericStrings(processedData);
 }
 
-async function getAllContacts(context: IExecuteFunctions, itemIndex: number): Promise<any> {
+async function getAllContacts(
+  context: IExecuteFunctions,
+  itemIndex: number,
+  useV2 = false,
+): Promise<any> {
   const returnAll = getOptionalParam(context, 'returnAll', itemIndex, false);
   const options = getOptionalParam(context, 'options', itemIndex, {});
   const qs: any = buildQueryFromOptions(options);
+
+  if (useV2) {
+    const endpoint = '/v2/contacts';
+    let responseData: any[];
+    if (returnAll) {
+      responseData = await makePaginatedRequestV2(context, 'contacts', 'GET', endpoint, {}, qs);
+    } else {
+      const response = await makeApiRequest(context, 'GET', endpoint, {}, qs);
+      responseData = response.data || Object.values(response);
+    }
+    const processedData = processContactFields(
+      responseData,
+      options,
+      (options as any).fieldsToReturn,
+    );
+    return convertNumericStrings(processedData);
+  }
 
   // Build search expression from structured filters
   const searchParts: string[] = [];
@@ -330,13 +352,20 @@ async function getAllContacts(context: IExecuteFunctions, itemIndex: number): Pr
   return convertNumericStrings(processedData);
 }
 
-async function deleteContact(context: IExecuteFunctions, itemIndex: number): Promise<any> {
+async function deleteContact(
+  context: IExecuteFunctions,
+  itemIndex: number,
+  useV2 = false,
+): Promise<any> {
   const options = getOptionalParam(context, 'options', itemIndex, {});
   const contactId = getRequiredParam(context, 'contactId', itemIndex);
   try {
     let responseData: any[];
-    const response = await makeApiRequest(context, 'DELETE', `/contacts/${contactId}/delete`);
-    if (response && response.contact !== undefined) {
+    const endpoint = useV2 ? `/v2/contacts/${contactId}` : `/contacts/${contactId}/delete`;
+    const response = await makeApiRequest(context, 'DELETE', endpoint);
+    if (useV2) {
+      responseData = [{ success: true, message: 'Contact deleted successfully.' }];
+    } else if (response && response.contact !== undefined) {
       responseData = [response.contact];
     } else {
       responseData = [{ success: true, message: 'Contact deleted successfully.' }];
@@ -472,7 +501,11 @@ async function getContactDevices(context: IExecuteFunctions, itemIndex: number):
   return convertNumericStrings(result);
 }
 
-async function getContactActivity(context: IExecuteFunctions, itemIndex: number): Promise<any> {
+async function getContactActivity(
+  context: IExecuteFunctions,
+  itemIndex: number,
+  useV2 = false,
+): Promise<any> {
   const contactId = getRequiredParam(context, 'contactId', itemIndex);
   const options = getOptionalParam(context, 'options', itemIndex, {});
   const qs: any = {};
@@ -488,65 +521,73 @@ async function getContactActivity(context: IExecuteFunctions, itemIndex: number)
   if ((options as any).orderBy)
     qs.order = [(options as any).orderBy, (options as any).orderByDir ?? 'asc'];
   if ((options as any).limit) qs.limit = (options as any).limit;
-  const result = await makePaginatedRequest(
-    context,
-    'events',
-    'GET',
-    `/contacts/${contactId}/activity`,
-    {},
-    qs,
-  );
+  const endpoint = useV2 ? `/v2/contacts/${contactId}/activity` : `/contacts/${contactId}/activity`;
+  const result = useV2
+    ? await makePaginatedRequestV2(context, 'events', 'GET', endpoint, {}, qs)
+    : await makePaginatedRequest(context, 'events', 'GET', endpoint, {}, qs);
   return convertNumericStrings(result);
 }
 
-async function getContactNotes(context: IExecuteFunctions, itemIndex: number): Promise<any> {
+async function getContactNotes(
+  context: IExecuteFunctions,
+  itemIndex: number,
+  useV2 = false,
+): Promise<any> {
   const contactId = getRequiredParam(context, 'contactId', itemIndex);
   const options = getOptionalParam(context, 'options', itemIndex, {});
   const qs: any = {};
   if ((options as any).search) qs.search = (options as any).search;
   if ((options as any).orderBy) qs.orderBy = (options as any).orderBy;
   if ((options as any).orderByDir) qs.orderByDir = (options as any).orderByDir;
-  const result = await makePaginatedRequest(
-    context,
-    'notes',
-    'GET',
-    `/contacts/${contactId}/notes`,
-    {},
-    qs,
-  );
+  const endpoint = useV2 ? `/v2/contacts/${contactId}/notes` : `/contacts/${contactId}/notes`;
+  const result = useV2
+    ? await makePaginatedRequestV2(context, 'notes', 'GET', endpoint, {}, qs)
+    : await makePaginatedRequest(context, 'notes', 'GET', endpoint, {}, qs);
   return convertNumericStrings(result);
 }
 
-async function getContactCompanies(context: IExecuteFunctions, itemIndex: number): Promise<any> {
+async function getContactCompanies(
+  context: IExecuteFunctions,
+  itemIndex: number,
+  useV2 = false,
+): Promise<any> {
   const contactId = getRequiredParam(context, 'contactId', itemIndex);
-  const result = await makePaginatedRequest(
-    context,
-    'companies',
-    'GET',
-    `/contacts/${contactId}/companies`,
-  );
+  const endpoint = useV2
+    ? `/v2/contacts/${contactId}/companies`
+    : `/contacts/${contactId}/companies`;
+  const result = useV2
+    ? await makePaginatedRequestV2(context, 'companies', 'GET', endpoint)
+    : await makePaginatedRequest(context, 'companies', 'GET', endpoint);
   return convertNumericStrings(result);
 }
 
-async function getContactCampaigns(context: IExecuteFunctions, itemIndex: number): Promise<any> {
+async function getContactCampaigns(
+  context: IExecuteFunctions,
+  itemIndex: number,
+  useV2 = false,
+): Promise<any> {
   const contactId = getRequiredParam(context, 'contactId', itemIndex);
-  const result = await makePaginatedRequest(
-    context,
-    'campaigns',
-    'GET',
-    `/contacts/${contactId}/campaigns`,
-  );
+  const endpoint = useV2
+    ? `/v2/contacts/${contactId}/campaigns`
+    : `/contacts/${contactId}/campaigns`;
+  const result = useV2
+    ? await makePaginatedRequestV2(context, 'campaigns', 'GET', endpoint)
+    : await makePaginatedRequest(context, 'campaigns', 'GET', endpoint);
   return convertNumericStrings(result);
 }
 
-async function getContactSegments(context: IExecuteFunctions, itemIndex: number): Promise<any> {
+async function getContactSegments(
+  context: IExecuteFunctions,
+  itemIndex: number,
+  useV2 = false,
+): Promise<any> {
   const contactId = getRequiredParam(context, 'contactId', itemIndex);
-  const result = await makePaginatedRequest(
-    context,
-    'segments',
-    'GET',
-    `/contacts/${contactId}/segments`,
-  );
+  const endpoint = useV2
+    ? `/v2/contacts/${contactId}/segments`
+    : `/contacts/${contactId}/segments`;
+  const result = useV2
+    ? await makePaginatedRequestV2(context, 'segments', 'GET', endpoint)
+    : await makePaginatedRequest(context, 'segments', 'GET', endpoint);
   return convertNumericStrings(result);
 }
 
@@ -632,7 +673,11 @@ async function removeContactFromCampaigns(
   return results;
 }
 
-async function getAllContactActivity(context: IExecuteFunctions, itemIndex: number): Promise<any> {
+async function getAllContactActivity(
+  context: IExecuteFunctions,
+  itemIndex: number,
+  useV2 = false,
+): Promise<any> {
   const options = getOptionalParam(context, 'options', itemIndex, {});
   const qs: any = {};
   const filters: any = {};
@@ -647,7 +692,10 @@ async function getAllContactActivity(context: IExecuteFunctions, itemIndex: numb
   if ((options as any).orderBy)
     qs.order = [(options as any).orderBy, (options as any).orderByDir ?? 'asc'];
   if ((options as any).limit) qs.limit = (options as any).limit;
-  const result = await makePaginatedRequest(context, 'events', 'GET', `/contacts/activity`, {}, qs);
+  const endpoint = useV2 ? '/v2/contacts/activity' : '/contacts/activity';
+  const result = useV2
+    ? await makePaginatedRequestV2(context, 'events', 'GET', endpoint, {}, qs)
+    : await makePaginatedRequest(context, 'events', 'GET', endpoint, {}, qs);
   return convertNumericStrings(result);
 }
 
@@ -756,7 +804,13 @@ function addContactFields(body: any, fields: any, useV2 = false) {
   if (fields.owner) body.owner = fields.owner;
   if (fields.perspective) body.perspective = fields.perspective;
   if (fields.points) body.points = fields.points;
-  if (fields.preferredChannel) body.preferred_channel = fields.preferredChannel;
+  
+  if (useV2) {
+    if (fields.preferredChannel) body.preferredChannel = fields.preferredChannel;
+  } else {
+    if (fields.preferredChannel) body.preferred_channel = fields.preferredChannel;
+  }
+  
   if (fields.tags) body.tags = normalizeTagsInput(fields.tags);
   const customFieldsUi = fields.customFieldsUi as any;
   if (customFieldsUi?.customFieldValues) {

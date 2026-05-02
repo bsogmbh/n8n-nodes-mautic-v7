@@ -7,6 +7,7 @@ import {
 } from 'n8n-workflow';
 import { mauticApiRequest, mauticApiRequestAllItems } from '../GenericFunctions';
 import type { IExecuteFunctions, IDataObject } from 'n8n-workflow';
+import { normaliseV2Collection } from './DataHelpers';
 
 export type MauticVersion = 'v6' | 'v7';
 
@@ -75,6 +76,47 @@ export async function makePaginatedRequest(
     }
     throw new NodeApiError(context.getNode(), error as JsonObject);
   }
+}
+
+// Standardized paginated API request wrapper (V2 - page based)
+export async function makePaginatedRequestV2(
+  context: IExecuteFunctions,
+  _resource: string,
+  method: IHttpRequestMethods,
+  endpoint: string,
+  body: IDataObject = {},
+  query: IDataObject = {},
+  limit?: number,
+): Promise<any[]> {
+  const results: IDataObject[] = [];
+  let page = 1;
+  const qs = { ...query };
+
+  while (true) {
+    qs.page = page;
+    const response = await makeApiRequest(context, method, endpoint, body, qs);
+    const pageItems = normaliseV2Collection(response);
+
+    if (!pageItems.length) {
+      break;
+    }
+
+    if (limit !== undefined && results.length + pageItems.length > limit) {
+      const needed = limit - results.length;
+      results.push(...pageItems.slice(0, needed));
+      break;
+    } else {
+      results.push(...pageItems);
+    }
+
+    if (limit !== undefined && results.length >= limit) {
+      break;
+    }
+
+    page += 1;
+  }
+
+  return results;
 }
 
 // Handle API errors with appropriate user-friendly messages

@@ -116,6 +116,58 @@ export function createBatchSuccessResponse(
   } as IDataObject;
 }
 
+// Normalize V2 API single item response
+export function normaliseV2Item(response: any): IDataObject {
+  if (!response) return {};
+
+  // JSON:API style
+  if (response.data && typeof response.data === 'object') {
+    const data = response.data;
+    const attributes = (data.attributes || {}) as IDataObject;
+    const id = data.id;
+    return convertNumericStrings({
+      id,
+      ...attributes,
+    });
+  }
+
+  // Plain JSON array or object
+  if (Array.isArray(response)) {
+    return convertNumericStrings(response[0] || {});
+  }
+
+  if (response.attributes) {
+    return convertNumericStrings({
+      id: response.id,
+      ...(response.attributes as IDataObject),
+    });
+  }
+
+  return convertNumericStrings(response as IDataObject);
+}
+
+// Normalize V2 API collection response
+export function normaliseV2Collection(response: any): IDataObject[] {
+  if (!response) return [];
+
+  // JSON:API collection
+  if (response.data && Array.isArray(response.data)) {
+    return response.data.map((entry: any) => normaliseV2Item({ data: entry }));
+  }
+
+  // application/json array
+  if (Array.isArray(response)) {
+    return response.map((entry: IDataObject) => convertNumericStrings(entry));
+  }
+
+  // Hydra collection
+  if (Array.isArray(response.member)) {
+    return response.member.map((entry: IDataObject) => convertNumericStrings(entry));
+  }
+
+  return [];
+}
+
 // Convert numeric strings to numbers recursively
 export function convertNumericStrings(data: any): any {
   if (data === null || data === undefined) {

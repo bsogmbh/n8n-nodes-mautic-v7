@@ -4,9 +4,13 @@ import {
   makePaginatedRequest,
   getOptionalParam,
   getRequiredParam,
-  getMauticVersion,
 } from '../utils/ApiHelpers';
-import { buildQueryFromOptions, convertNumericStrings } from '../utils/DataHelpers';
+import {
+  buildQueryFromOptions,
+  convertNumericStrings,
+  normaliseV2Item,
+  normaliseV2Collection,
+} from '../utils/DataHelpers';
 
 // -----------------------------
 // v1 tag helpers (legacy API)
@@ -69,56 +73,6 @@ export async function deleteTagV1(context: IExecuteFunctions, itemIndex: number)
 // v2 tag helpers (Mautic 7+)
 // -----------------------------
 
-function normaliseV2Tag(response: any): IDataObject {
-  if (!response) return {};
-
-  // JSON:API style
-  if (response.data && typeof response.data === 'object') {
-    const data = response.data;
-    const attributes = (data.attributes || {}) as IDataObject;
-    const id = data.id;
-    return convertNumericStrings({
-      id,
-      ...attributes,
-    });
-  }
-
-  // Plain JSON array or object as per application/json schema
-  if (Array.isArray(response)) {
-    return convertNumericStrings(response[0] || {});
-  }
-
-  if (response.attributes) {
-    return convertNumericStrings({
-      id: response.id,
-      ...(response.attributes as IDataObject),
-    });
-  }
-
-  return convertNumericStrings(response as IDataObject);
-}
-
-function normaliseV2TagCollection(response: any): IDataObject[] {
-  if (!response) return [];
-
-  // JSON:API collection
-  if (response.data && Array.isArray(response.data)) {
-    return response.data.map((entry: any) => normaliseV2Tag({ data: entry }));
-  }
-
-  // application/json array
-  if (Array.isArray(response)) {
-    return response.map((entry: IDataObject) => convertNumericStrings(entry));
-  }
-
-  // Hydra collection under member
-  if (Array.isArray(response.member)) {
-    return response.member.map((entry: IDataObject) => convertNumericStrings(entry));
-  }
-
-  return [];
-}
-
 export async function createTagV2(context: IExecuteFunctions, itemIndex: number): Promise<any> {
   const tag = getRequiredParam<string>(context, 'tag', itemIndex);
   const description = getOptionalParam<string>(context, 'description', itemIndex, '');
@@ -132,7 +86,7 @@ export async function createTagV2(context: IExecuteFunctions, itemIndex: number)
 
   const headers = { 'Content-Type': 'application/json' };
   const response = await makeApiRequest(context, 'POST', '/v2/tags', body, {}, undefined, headers);
-  return normaliseV2Tag(response);
+  return normaliseV2Item(response);
 }
 
 export async function updateTagV2(context: IExecuteFunctions, itemIndex: number): Promise<any> {
@@ -162,13 +116,13 @@ export async function updateTagV2(context: IExecuteFunctions, itemIndex: number)
     undefined,
     headers,
   );
-  return normaliseV2Tag(response);
+  return normaliseV2Item(response);
 }
 
 export async function getTagV2(context: IExecuteFunctions, itemIndex: number): Promise<any> {
   const tagId = getRequiredParam<string>(context, 'tagId', itemIndex);
   const response = await makeApiRequest(context, 'GET', `/v2/tags/${tagId}`);
-  return normaliseV2Tag(response);
+  return normaliseV2Item(response);
 }
 
 export async function getAllTagsV2(context: IExecuteFunctions, itemIndex: number): Promise<any[]> {
@@ -193,7 +147,7 @@ export async function getAllTagsV2(context: IExecuteFunctions, itemIndex: number
   while (true) {
     qs.page = page;
     const response = await makeApiRequest(context, 'GET', '/v2/tags', {}, qs);
-    const pageItems = normaliseV2TagCollection(response);
+    const pageItems = normaliseV2Collection(response);
     if (!pageItems.length) {
       break;
     }

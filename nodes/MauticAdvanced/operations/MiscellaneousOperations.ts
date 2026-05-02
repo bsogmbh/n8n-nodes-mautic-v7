@@ -5,6 +5,7 @@ import {
   makePaginatedRequest,
   getOptionalParam,
   getRequiredParam,
+  getMauticVersion,
   handleApiError,
 } from '../utils/ApiHelpers';
 import { buildQueryFromOptions, wrapSingleItem, convertNumericStrings } from '../utils/DataHelpers';
@@ -19,7 +20,6 @@ import {
   getTagV2,
   getAllTagsV2,
   deleteTagV2,
-  getMauticVersion,
 } from './TagOperations';
 
 // Public execute entry points
