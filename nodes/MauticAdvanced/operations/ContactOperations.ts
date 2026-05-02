@@ -7,6 +7,7 @@ import {
   makePaginatedRequest,
   getOptionalParam,
   getRequiredParam,
+  getMauticVersion,
 } from '../utils/ApiHelpers';
 import {
   buildQueryFromOptions,
@@ -23,21 +24,24 @@ export async function executeContactOperation(
 ): Promise<INodeExecutionData[]> {
   let responseData: any;
   try {
+    const version = await getMauticVersion(context);
+    const useV2 = version === 'v7';
+
     switch (operation) {
       case 'create':
-        responseData = await createContact(context, i);
+        responseData = await createContact(context, i, useV2);
         break;
       case 'update':
-        responseData = await updateContact(context, i);
+        responseData = await updateContact(context, i, useV2);
         break;
       case 'get':
-        responseData = await getContact(context, i);
+        responseData = await getContact(context, i, useV2);
         break;
       case 'getAll':
-        responseData = await getAllContacts(context, i);
+        responseData = await getAllContacts(context, i, useV2);
         break;
       case 'delete':
-        responseData = await deleteContact(context, i);
+        responseData = await deleteContact(context, i, useV2);
         break;
       case 'sendEmail':
         responseData = await sendEmailToContact(context, i);
@@ -58,19 +62,19 @@ export async function executeContactOperation(
         responseData = await getContactDevices(context, i);
         break;
       case 'getActivity':
-        responseData = await getContactActivity(context, i);
+        responseData = await getContactActivity(context, i, useV2);
         break;
       case 'getNotes':
-        responseData = await getContactNotes(context, i);
+        responseData = await getContactNotes(context, i, useV2);
         break;
       case 'getCompanies':
-        responseData = await getContactCompanies(context, i);
+        responseData = await getContactCompanies(context, i, useV2);
         break;
       case 'getCampaigns':
-        responseData = await getContactCampaigns(context, i);
+        responseData = await getContactCampaigns(context, i, useV2);
         break;
       case 'getSegments':
-        responseData = await getContactSegments(context, i);
+        responseData = await getContactSegments(context, i, useV2);
         break;
       case 'addToSegments':
         responseData = await addContactToSegments(context, i);
@@ -85,7 +89,7 @@ export async function executeContactOperation(
         responseData = await removeContactFromCampaigns(context, i);
         break;
       case 'getAllActivity':
-        responseData = await getAllContactActivity(context, i);
+        responseData = await getAllContactActivity(context, i, useV2);
         break;
       case 'getOwners':
         responseData = await getContactOwners(context);
@@ -106,22 +110,35 @@ export async function executeContactOperation(
   }
 }
 
-async function createContact(context: IExecuteFunctions, itemIndex: number): Promise<any> {
+async function createContact(
+  context: IExecuteFunctions,
+  itemIndex: number,
+  useV2 = false,
+): Promise<any> {
   const options = getOptionalParam(context, 'options', itemIndex, {});
   const additionalFields = getOptionalParam(context, 'additionalFields', itemIndex, {});
   const jsonActive = getOptionalParam(context, 'jsonParameters', itemIndex, false);
   let body: any = {};
   if (!jsonActive) {
-    body.email = getOptionalParam(context, 'email', itemIndex, '');
-    body.firstname = getOptionalParam(context, 'firstName', itemIndex, '');
-    body.lastname = getOptionalParam(context, 'lastName', itemIndex, '');
-    body.company = getOptionalParam(context, 'company', itemIndex, '');
-    body.position = getOptionalParam(context, 'position', itemIndex, '');
-    body.title = getOptionalParam(context, 'title', itemIndex, '');
+    if (useV2) {
+      body.email = getOptionalParam(context, 'email', itemIndex, '');
+      body.firstName = getOptionalParam(context, 'firstName', itemIndex, '');
+      body.lastName = getOptionalParam(context, 'lastName', itemIndex, '');
+      body.company = getOptionalParam(context, 'company', itemIndex, '');
+      body.position = getOptionalParam(context, 'position', itemIndex, '');
+      body.title = getOptionalParam(context, 'title', itemIndex, '');
+    } else {
+      body.email = getOptionalParam(context, 'email', itemIndex, '');
+      body.firstname = getOptionalParam(context, 'firstName', itemIndex, '');
+      body.lastname = getOptionalParam(context, 'lastName', itemIndex, '');
+      body.company = getOptionalParam(context, 'company', itemIndex, '');
+      body.position = getOptionalParam(context, 'position', itemIndex, '');
+      body.title = getOptionalParam(context, 'title', itemIndex, '');
+    }
   } else {
     body = validateJsonParameter(context, 'bodyJson', itemIndex);
   }
-  addContactFields(body, additionalFields);
+  addContactFields(body, additionalFields, useV2);
 
   // Data sanitization: Remove empty string values and validate email format
   const sanitizedBody: any = {};
@@ -144,36 +161,42 @@ async function createContact(context: IExecuteFunctions, itemIndex: number): Pro
     }
   }
 
-  // Log the sanitized body for debugging (only in development)
-  if (process.env.NODE_ENV === 'development') {
-    console.log(
-      'Mautic Contact Creation - Sanitized Body:',
-      JSON.stringify(sanitizedBody, null, 2),
-    );
-  }
-
-  const response = await makeApiRequest(context, 'POST', '/contacts/new', sanitizedBody);
-  const contactData = [response.contact];
+  const endpoint = useV2 ? '/v2/contacts' : '/contacts/new';
+  const response = await makeApiRequest(context, 'POST', endpoint, sanitizedBody);
+  const contactData = useV2 ? [response.data || response] : [response.contact];
   return processContactFields(contactData, options);
 }
 
-async function updateContact(context: IExecuteFunctions, itemIndex: number): Promise<any> {
+async function updateContact(
+  context: IExecuteFunctions,
+  itemIndex: number,
+  useV2 = false,
+): Promise<any> {
   const options = getOptionalParam(context, 'options', itemIndex, {});
   const updateFields = getOptionalParam(context, 'updateFields', itemIndex, {}) as {
     [key: string]: any;
   };
   const contactId = getRequiredParam(context, 'contactId', itemIndex);
   const body: any = {};
-  if (updateFields.email) body.email = updateFields.email;
-  if (updateFields.firstName) body.firstname = updateFields.firstName;
-  if (updateFields.lastName) body.lastname = updateFields.lastName;
-  if (updateFields.company) body.company = updateFields.company;
-  if (updateFields.position) body.position = updateFields.position;
-  if (updateFields.title) body.title = updateFields.title;
+  if (useV2) {
+    if (updateFields.email) body.email = updateFields.email;
+    if (updateFields.firstName) body.firstName = updateFields.firstName;
+    if (updateFields.lastName) body.lastName = updateFields.lastName;
+    if (updateFields.company) body.company = updateFields.company;
+    if (updateFields.position) body.position = updateFields.position;
+    if (updateFields.title) body.title = updateFields.title;
+  } else {
+    if (updateFields.email) body.email = updateFields.email;
+    if (updateFields.firstName) body.firstname = updateFields.firstName;
+    if (updateFields.lastName) body.lastname = updateFields.lastName;
+    if (updateFields.company) body.company = updateFields.company;
+    if (updateFields.position) body.position = updateFields.position;
+    if (updateFields.title) body.title = updateFields.title;
+  }
   if ((updateFields as any).bodyJson) {
     Object.assign(body, validateJsonParameter(context, 'updateFields.bodyJson', itemIndex));
   }
-  addContactFields(body, updateFields);
+  addContactFields(body, updateFields, useV2);
 
   // Data sanitization: Remove empty string values (matching create behavior)
   const sanitizedBody: any = {};
@@ -183,21 +206,22 @@ async function updateContact(context: IExecuteFunctions, itemIndex: number): Pro
     }
   });
 
-  const response = await makeApiRequest(
-    context,
-    'PATCH',
-    `/contacts/${contactId}/edit`,
-    sanitizedBody,
-  );
-  const contactData = [response.contact];
+  const endpoint = useV2 ? `/v2/contacts/${contactId}` : `/contacts/${contactId}/edit`;
+  const response = await makeApiRequest(context, 'PATCH', endpoint, sanitizedBody);
+  const contactData = useV2 ? [response.data || response] : [response.contact];
   return processContactFields(contactData, options);
 }
 
-async function getContact(context: IExecuteFunctions, itemIndex: number): Promise<any> {
+async function getContact(
+  context: IExecuteFunctions,
+  itemIndex: number,
+  useV2 = false,
+): Promise<any> {
   const options = getOptionalParam(context, 'options', itemIndex, {});
   const contactId = getRequiredParam(context, 'contactId', itemIndex);
-  const response = await makeApiRequest(context, 'GET', `/contacts/${contactId}`);
-  const contactData = [response.contact];
+  const endpoint = useV2 ? `/v2/contacts/${contactId}` : `/contacts/${contactId}`;
+  const response = await makeApiRequest(context, 'GET', endpoint);
+  const contactData = useV2 ? [response.data || response] : [response.contact];
   const processedData = processContactFields(contactData, options, (options as any).fieldsToReturn);
   return convertNumericStrings(processedData);
 }
@@ -705,7 +729,7 @@ function normalizeTagsInput(tagsInput: any): string[] {
   return [];
 }
 
-function addContactFields(body: any, fields: any) {
+function addContactFields(body: any, fields: any, useV2 = false) {
   const addressUi = fields.addressUi as any;
   if (addressUi?.addressValues) {
     const { addressValues } = addressUi;

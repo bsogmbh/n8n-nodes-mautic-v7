@@ -4,28 +4,9 @@ import {
   makePaginatedRequest,
   getOptionalParam,
   getRequiredParam,
+  getMauticVersion,
 } from '../utils/ApiHelpers';
 import { buildQueryFromOptions, convertNumericStrings } from '../utils/DataHelpers';
-
-type MauticVersion = 'v6' | 'v7';
-
-export async function getMauticVersion(context: IExecuteFunctions): Promise<MauticVersion> {
-  const authenticationMethod = context.getNodeParameter(
-    'authentication',
-    0,
-    'credentials',
-  ) as string;
-
-  if (authenticationMethod === 'credentials') {
-    const credentials = await context.getCredentials('mauticAdvancedApi');
-    const version = (credentials.mauticVersion as string) || 'v6';
-    return version === 'v7' ? 'v7' : 'v6';
-  }
-
-  const credentials = await context.getCredentials('mauticAdvancedOAuth2Api');
-  const version = (credentials.mauticVersion as string) || 'v6';
-  return version === 'v7' ? 'v7' : 'v6';
-}
 
 // -----------------------------
 // v1 tag helpers (legacy API)

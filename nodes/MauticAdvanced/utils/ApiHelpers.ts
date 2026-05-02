@@ -8,6 +8,27 @@ import {
 import { mauticApiRequest, mauticApiRequestAllItems } from '../GenericFunctions';
 import type { IExecuteFunctions, IDataObject } from 'n8n-workflow';
 
+export type MauticVersion = 'v6' | 'v7';
+
+// Get the Mautic version from credentials
+export async function getMauticVersion(context: IExecuteFunctions): Promise<MauticVersion> {
+  const authenticationMethod = context.getNodeParameter(
+    'authentication',
+    0,
+    'credentials',
+  ) as string;
+
+  if (authenticationMethod === 'credentials') {
+    const credentials = await context.getCredentials('mauticAdvancedApi');
+    const version = (credentials.mauticVersion as string) || 'v6';
+    return version === 'v7' ? 'v7' : 'v6';
+  }
+
+  const credentials = await context.getCredentials('mauticAdvancedOAuth2Api');
+  const version = (credentials.mauticVersion as string) || 'v6';
+  return version === 'v7' ? 'v7' : 'v6';
+}
+
 // Standardized API request wrapper with error handling
 export async function makeApiRequest(
   context: IExecuteFunctions,

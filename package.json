@@ -1,31 +1,26 @@
 {
-  "name": "n8n-nodes-mautic-advanced",
-  "version": "1.0.0",
-  "description": "Enhanced n8n node for Mautic with comprehensive API coverage including tags, campaigns, categories, and advanced contact management",
+  "name": "n8n-nodes-mautic-v7",
+  "version": "1.0.1",
+  "description": "Enhanced n8n node for Mautic 7 compatibility with comprehensive API coverage including tags, campaigns, and advanced management",
   "keywords": [
     "n8n",
     "n8n-nodes",
     "mautic",
-    "marketing-automation",
-    "crm",
-    "email-marketing",
-    "lead-management",
-    "campaigns",
-    "contacts",
-    "tags"
+    "mautic7",
+    "marketing-automation"
   ],
   "license": "MIT",
   "author": {
-    "name": "Max Soukhomlinov",
-    "email": "maxs@intellectit.com.au"
+    "name": "BSO GmbH",
+    "email": "mailing@bso-gmbh.de"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/msoukhomlinov/n8n-nodes-mautic-advanced.git"
+    "url": "git+https://github.com/bsogmbh/n8n-nodes-mautic-v7.git"
   },
-  "homepage": "https://github.com/msoukhomlinov/n8n-nodes-mautic-advanced#readme",
+  "homepage": "https://github.com/bsogmbh/n8n-nodes-mautic-v7#readme",
   "bugs": {
-    "url": "https://github.com/msoukhomlinov/n8n-nodes-mautic-advanced/issues"
+    "url": "https://github.com/bsogmbh/n8n-nodes-mautic-v7/issues"
   },
   "main": "dist/nodes/MauticAdvanced/MauticAdvanced.node.js",
   "scripts": {
