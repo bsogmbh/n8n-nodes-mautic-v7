@@ -44,7 +44,8 @@
     "nodes": [
       "dist/nodes/MauticAdvanced/MauticAdvanced.node.js",
       "dist/nodes/MauticAdvanced/MauticAdvancedTrigger.node.js",
-      "dist/nodes/MauticAdvanced/MauticAdvancedAiTools.node.js"
+      "dist/nodes/MauticAdvanced/MauticAdvancedAiTools.node.js",
+      "dist/nodes/MauticAdvanced/MauticOAuthTest.node.js"
     ]
   },
   "devDependencies": {

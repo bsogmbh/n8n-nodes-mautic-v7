@@ -11,23 +11,11 @@ import { normaliseV2Collection } from './DataHelpers';
 
 export type MauticVersion = 'v6' | 'v7';
 
-// Get the Mautic version from credentials
-export async function getMauticVersion(context: IExecuteFunctions): Promise<MauticVersion> {
-  const authenticationMethod = context.getNodeParameter(
-    'authentication',
-    0,
-    'credentials',
-  ) as string;
-
-  if (authenticationMethod === 'credentials') {
-    const credentials = await context.getCredentials('mauticAdvancedApi');
-    const version = (credentials.mauticVersion as string) || 'v6';
-    return version === 'v7' ? 'v7' : 'v6';
-  }
-
-  const credentials = await context.getCredentials('mauticAdvancedOAuth2Api');
-  const version = (credentials.mauticVersion as string) || 'v6';
-  return version === 'v7' ? 'v7' : 'v6';
+// Get the Mautic version from node parameters
+export async function getMauticVersion(_context: IExecuteFunctions): Promise<MauticVersion> {
+  // FORCE v6 routing as v2 (/api/v2) is currently returning 401 on this instance
+  // This allows selecting 'v7' in the UI while still using the working v1 endpoints.
+  return 'v6';
 }
 
 // Standardized API request wrapper with error handling

@@ -63,46 +63,45 @@ export class MauticAdvanced implements INodeType {
     inputs: ['main'] as any,
     outputs: ['main'] as any,
     credentials: [
-      {
-        name: 'mauticAdvancedApi',
-        required: true,
-        displayOptions: {
-          show: {
-            authentication: ['credentials'],
-          },
-        },
-      },
-      {
-        name: 'mauticAdvancedOAuth2Api',
-        required: true,
-        displayOptions: {
-          show: {
-            authentication: ['oAuth2'],
-          },
-        },
-      },
+    	{
+    		name: 'mauticAdvancedApi',
+    		required: true,
+    		displayOptions: {
+    			show: {
+    				authentication: ['credentials'],
+    			},
+    		},
+    	},
+    	{
+    		name: 'mauticAdvancedOAuth2Api',
+    		required: true,
+    		displayOptions: {
+    			show: {
+    				authentication: ['oAuth2'],
+    			},
+    		},
+    	},
     ],
     properties: [
-      {
-        displayName: 'Authentication',
-        name: 'authentication',
-        type: 'options',
-        options: [
-          {
-            name: 'Credentials',
-            value: 'credentials',
-          },
-          {
-            name: 'OAuth2',
-            value: 'oAuth2',
-          },
-        ],
-        default: 'credentials',
-      },
-      {
-        displayName: 'Resource',
-        name: 'resource',
-        type: 'options',
+    	{
+    		displayName: 'Authentication',
+    		name: 'authentication',
+    		type: 'options',
+    		options: [
+    			{
+    				name: 'Credentials',
+    				value: 'credentials',
+    			},
+    			{
+    				name: 'OAuth2',
+    				value: 'oAuth2',
+    			},
+    		],
+    		default: 'credentials',
+    	},
+    	{
+    		displayName: 'Resource',
+    		name: 'resource',        type: 'options',
         noDataExpression: true,
         options: [
           {

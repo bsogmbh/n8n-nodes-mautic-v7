@@ -208,7 +208,8 @@ async function updateContact(
   });
 
   const endpoint = useV2 ? `/v2/contacts/${contactId}` : `/contacts/${contactId}/edit`;
-  const response = await makeApiRequest(context, 'PATCH', endpoint, sanitizedBody);
+  const headers = useV2 ? { 'Content-Type': 'application/merge-patch+json' } : {};
+  const response = await makeApiRequest(context, 'PATCH', endpoint, sanitizedBody, {}, undefined, headers);
   const contactData = useV2 ? [response.data || response] : [response.contact];
   return processContactFields(contactData, options);
 }

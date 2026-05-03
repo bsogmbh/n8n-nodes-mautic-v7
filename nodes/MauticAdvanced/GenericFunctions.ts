@@ -20,17 +20,27 @@ export async function mauticApiRequest(
   headers?: IDataObject,
 ): Promise<any> {
   const authenticationMethod = this.getNodeParameter('authentication', 0, 'credentials') as string;
+  
+  // Logic: Mautic 7 API v2 (/api/v2) is currently broken on this instance due to Mautic-internal database issues.
+  // We FORCE the use of the legacy but fully functional /api (v1) endpoint for BOTH selections (v6 and v7).
+  const apiPrefix = '/api';
 
   const options: IRequestOptions = {
-    headers: headers || {},
+    headers: {
+      Accept: 'application/json',
+      ...headers,
+    },
     method,
     qs: query,
-    uri: uri || `/api${endpoint}`,
+    uri: uri || `${apiPrefix}${endpoint}`,
     json: true,
   };
 
   if (['POST', 'PUT', 'PATCH'].includes(method)) {
     options.body = body;
+  } else {
+    // Explicitly delete body for GET and DELETE to prevent Mautic 7 400 errors
+    delete options.body;
   }
 
   try {
@@ -41,37 +51,47 @@ export async function mauticApiRequest(
       const baseUrl = credentials.url as string;
 
       options.uri = `${baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl}${options.uri}`;
-      returnData = await this.helpers.requestWithAuthentication.call(
-        this,
-        'mauticAdvancedApi',
-        options,
-      );
+      returnData = await this.helpers.requestWithAuthentication.call(this, 'mauticAdvancedApi', options);
     } else {
       const credentials = await this.getCredentials('mauticAdvancedOAuth2Api');
       const baseUrl = credentials.url as string;
 
       options.uri = `${baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl}${options.uri}`;
+      
+      // Ensure specific headers for Mautic 7 compatibility
+      options.headers = {
+      	...options.headers,
+      	'X-Requested-With': 'XMLHttpRequest',
+      };
+      
       returnData = await this.helpers.requestOAuth2.call(this, 'mauticAdvancedOAuth2Api', options, {
         includeCredentialsOnRefreshOnBody: true,
       });
     }
 
-    if (returnData.errors) {
+    if (returnData && returnData.errors) {
       // They seem to sometimes return 200 status but still error.
-      // Preserve the full error object including details for better error handling
       throw new NodeApiError(this.getNode(), returnData as JsonObject, {
         httpCode: '400',
-        description: returnData,
+        description: `URL: ${options.uri} | Response: ${JSON.stringify(returnData)}`,
       });
     }
 
-    return returnData;
+    return returnData || { success: true };
   } catch (error) {
-    // Preserve error details when available for better error handling
+    // Catch-all for http errors to see the response body
+    // Axios puts the body in error.response.data
+    const responseBody = (error as any).response?.data || (error as any).response?.body || (error as any).description || (error as any).message;
+    const errorString = typeof responseBody === 'object' ? JSON.stringify(responseBody) : String(responseBody);
+    
     if (error instanceof NodeApiError) {
+      error.description = `URL: ${options.uri} | Error: ${errorString}`;
       throw error;
     }
-    throw new NodeApiError(this.getNode(), error as JsonObject);
+    
+    throw new NodeApiError(this.getNode(), error as JsonObject, {
+      description: `URL: ${options.uri} | Error: ${errorString}`,
+    });
   }
 }
 

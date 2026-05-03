@@ -11,52 +11,32 @@ export class MauticAdvancedOAuth2Api implements ICredentialType {
 
   properties: INodeProperties[] = [
     {
+      displayName: 'Mautic URL',
+      name: 'url',
+      type: 'string',
+      default: '',
+      placeholder: 'https://name.mautic.net',
+      required: true,
+      description: 'The base URL of your Mautic instance (including https://)',
+    },
+    {
       displayName: 'Grant Type',
       name: 'grantType',
       type: 'hidden',
       default: 'authorizationCode',
     },
     {
-      displayName: 'URL',
-      name: 'url',
-      type: 'string',
-      default: '',
-      placeholder: 'https://name.mautic.net',
-    },
-    {
-      displayName: 'Mautic Version',
-      name: 'mauticVersion',
-      type: 'options',
-      default: 'v6',
-      options: [
-        {
-          name: 'v6 or lower',
-          value: 'v6',
-          description: 'Use legacy v1 API endpoints.',
-        },
-        {
-          name: 'v7 or higher',
-          value: 'v7',
-          description: 'Use v2 API endpoints where available.',
-        },
-      ],
-      description:
-        'Select the major Mautic version of this instance so the node can route API calls correctly.',
-    },
-    {
       displayName: 'Authorization URL',
       name: 'authUrl',
       type: 'hidden',
-      default:
-        '={{$self["url"].endsWith("/") ? $self["url"].slice(0, -1) : $self["url"]}}/oauth/v2/authorize',
+      default: '={{$self["url"]}}/oauth/v2/authorize',
       required: true,
     },
     {
       displayName: 'Access Token URL',
       name: 'accessTokenUrl',
       type: 'hidden',
-      default:
-        '={{$self["url"].endsWith("/") ? $self["url"].slice(0, -1) : $self["url"]}}/oauth/v2/token',
+      default: '={{$self["url"]}}/oauth/v2/token',
       required: true,
     },
     {
